@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <title>PouPix - Metas</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+    />
+
+    <link rel="stylesheet" href="../css/dropdown.css"> <script src="../js/functions-nav.js"></script> <style>
+      main.margin {
+        margin-top: 90px !important;
+      }
+
+      .width {
+        width: 120px;
+      }
+
+      .goal-item {
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center; /* Alinha verticalmente o nome/tipo e os botões */
+      }
+
+      .goal-details {
+        margin-top: 10px;
+      }
+
+      .progress {
+        height: 10px;
+        margin-top: 5px;
+      }
+
+      .goal-header h6 {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--dark-color); /* Certifique-se que --dark-color está definido em seu CSS */
+        margin-bottom: 0; /* Remove margem inferior do h6 */
+      }
+      
+      .goal-header > div:first-child { /* Para o div que contém o nome e o tipo */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+
+      .btn-primary {
+        background-color: var(--primary-color) !important; /* Certifique-se que --primary-color está definido */
+        border-color: var(--primary-color) !important;
+      }
+
+      .btn-primary:hover {
+        background-color: #07a178 !important; /* Exemplo de cor mais escura */
+        border-color: #07a178 !important;
+      }
+
+      .btn-danger {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+      }
+
+      .btn-danger:hover {
+        background-color: #c82333 !important;
+        border-color: #c82333 !important;
+      }
+
+
+
+      /* ajustes para telas pequenas */
+      @media only screen and (max-width: 992px) {
+        .margin {
+          margin-top: 60px !important;
+        }
+
+        .width {
+          width: 120px;
+        }
+
+        .goal-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .goal-header .btn-group {
+          margin-top: 10px;
+        }
+      }
+    </style>
+  </head>
+
+  <body style="background: linear-gradient(176deg, rgba(80,137,145,1) 0%, rgba(201,237,214,1) 100%); background-repeat: no-repeat; background-size: cover; min-height: 100vh;">
+    <div id="navbar-placeholder"></div>
+
+    <div class="container margin" style="padding: 60px;">
+      <h2 class="mb-4 text-white">Gerenciamento de Metas</h2>
+
+      <div class="card p-4 mb-4">
+        <h4 class="card-title">Minhas Metas</h4>
+        <ul id="listaMetas" class="list-group list-group-flush">
+          </ul>
+      </div>
+
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMeta">Adicionar Nova Meta</button>
+    </div>
+
+    <div class="modal fade" id="modalMeta" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content p-3">
+          <h5 class="modal-title mb-3" id="modalMetaTitle">Adicionar Meta</h5>
+          <input id="inputNomeMeta" type="text" class="form-control mb-2" placeholder="Nome da Meta">
+          <input id="inputValorMeta" type="number" class="form-control mb-2" placeholder="Valor Alvo (R$)">
+          <input id="inputTagMeta" type="text" class="form-control mb-2" placeholder="Tag (para vincular despesas)">
+          
+          <select id="inputTipoMeta" class="form-select mb-2">
+            <option value="despesa" selected>Gasto Programado / Orçamento</option>
+            <option value="economia">Meta de Economia</option>
+          </select>
+          
+          <input id="inputMetaId" type="hidden">
+          <button id="btnSalvarMeta" class="btn btn-primary w-100">Salvar</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      </footer>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      let goals = [];
+      let despesas = [];
+
+      function formatarValor(valor) {
+        return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
+      window.onload = async () => {
+        // Carrega a navbar - ajuste o caminho se necessário
+        // fetch('../navbar.html')
+        //   .then(response => response.text())
+        //   .then(data => {
+        //     document.getElementById('navbar-placeholder').innerHTML = data;
+        //     // Aqui você pode chamar a função para ativar os links da navbar, se houver
+        //     // activateCurrentNav(); 
+        //   })
+        //   .catch(error => console.error('Erro ao carregar a navbar:', error));
+
+        await fetchDespesas();
+        await fetchGoals();
+        preencherMetas();
+      };
+
+      async function fetchDespesas() {
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            console.error('Token não encontrado no localStorage. Faça login novamente.');
+            window.location.href = 'login.html'; // Ajuste para sua página de login
+            return;
+          }
+
+          const response = await fetch('http://localhost:8000/finance/expenses/', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          });
+          if (!response.ok) throw new Error(`Erro na resposta do servidor ao buscar despesas: ${response.status}`);
+          despesas = await response.json();
+        } catch (error) {
+          console.error('Erro ao buscar despesas:', error);
+        }
+      }
+
+      async function fetchGoals() {
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            console.error('Token não encontrado no localStorage. Faça login novamente.');
+            window.location.href = 'login.html'; // Ajuste para sua página de login
+            return;
+          }
+
+          const response = await fetch('http://localhost:8000/finance/goals/', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          });
+          if (!response.ok) throw new Error(`Erro na resposta do servidor ao buscar metas: ${response.status}`);
+          goals = await response.json();
+          
+          // Adiciona metas padrão se não existirem (assumindo que o backend já retorna o 'type' ou você o adicionará no backend)
+          const defaultGoalsNames = ["Casa", "Alimentação", "Transporte", "Lazer", "Saúde", "Educação"];
+          const existingGoalNames = goals.map(g => g.name);
+
+          for (const name of defaultGoalsNames) {
+            if (!existingGoalNames.includes(name)) {
+              try {
+                  const postResponse = await fetch('http://localhost:8000/finance/goals/', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({ name: name, amount: 0, tag: name, type: 'despesa' }), // Definindo tipo padrão
+                });
+                if (postResponse.ok) {
+                  const newGoal = await postResponse.json();
+                  goals.push(newGoal);
+                  existingGoalNames.push(newGoal.name); // Adiciona à lista para evitar duplicatas na mesma sessão
+                } else {
+                  console.error(`Erro ao criar meta padrão '${name}': ${postResponse.status}`);
+                }
+              } catch (postError){
+                console.error(`Erro de rede ao criar meta padrão '${name}':`, postError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao buscar metas:', error);
+        }
+      }
+
+      function calcularProgresso(goal) {
+        const despesasRelacionadas = despesas.filter(d => d.tag === goal.tag);
+        const totalGasto = despesasRelacionadas.reduce((acc, d) => acc + d.amount, 0);
+        return totalGasto;
+      }
+
+      function preencherMetas() {
+        const listaMetas = document.getElementById('listaMetas');
+        listaMetas.innerHTML = '';
+        goals.forEach(goal => {
+          // Para depuração, descomente a linha abaixo se ainda precisar verificar o tipo
+          // console.log('Processando meta:', goal.name, 'Tipo da meta:', goal.type); 
+
+          const progresso = calcularProgresso(goal);
+          const percentual = goal.amount > 0 ? (progresso / goal.amount) * 100 : 0;
+          
+          let barColor = 'var(--primary-color)'; // Cor padrão (seu verde atual)
+          let tipoMetaTexto = "Gasto Programado / Orçamento"; // Texto padrão
+
+          if (goal.type === 'economia') {
+            barColor = '#0D6EFD'; // Azul Bootstrap para metas de economia  
+            tipoMetaTexto = "Meta de Economia";
+          } else if (goal.type === 'despesa') {
+            barColor = '#FFC107'; // Amarelo Bootstrap para gastos/orçamentos
+            tipoMetaTexto = "Gasto Programado / Orçamento";
+          }
+          // Metas antigas sem 'type' (ou com type diferente) usarão a cor e texto padrão.
+
+          // Para depuração, descomente a linha abaixo se ainda precisar verificar a cor escolhida
+          // console.log('Para', goal.name, '- Tipo:', goal.type, '- Cor escolhida:', barColor);
+
+          const item = document.createElement('li');
+          item.className = 'list-group-item goal-item';
+          item.innerHTML = `
+            <div class="goal-header">
+              <div>
+                  <h6 class="mb-0">${goal.name}</h6>
+                  <small class="text-muted" style="font-size: 0.8em;">${tipoMetaTexto}</small>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-sm btn-primary" onclick="editarMeta(${goal.id}, '${goal.name.replace(/'/g, "\\'")}', ${goal.amount}, '${(goal.tag || '').replace(/'/g, "\\'")}', '${goal.type || 'despesa'}')">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deletarMeta(${goal.id})">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+            <div class="goal-details">
+              <small>Tag vinculada: ${goal.tag || 'Sem tag'}</small>
+              <p class="mb-1 mt-2">Progresso: ${formatarValor(progresso)} de ${formatarValor(goal.amount)}</p>
+              <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: ${percentual.toFixed(2)}%; background-color: ${barColor} !important;" aria-valuenow="${percentual.toFixed(2)}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          `;
+          listaMetas.appendChild(item);
+        });
+      }
+
+      function editarMeta(id, nome, valor, tag, type) {
+        document.getElementById('modalMetaTitle').textContent = 'Editar Meta';
+        document.getElementById('inputNomeMeta').value = nome;
+        document.getElementById('inputValorMeta').value = valor;
+        document.getElementById('inputTagMeta').value = tag;
+        document.getElementById('inputMetaId').value = id;
+        document.getElementById('inputTipoMeta').value = type || 'despesa'; 
+        new bootstrap.Modal(document.getElementById('modalMeta')).show();
+      }
+
+      document.getElementById('btnSalvarMeta').addEventListener('click', async () => {
+        const nome = document.getElementById('inputNomeMeta').value;
+        const valor = parseFloat(document.getElementById('inputValorMeta').value);
+        const tag = document.getElementById('inputTagMeta').value;
+        const tipo = document.getElementById('inputTipoMeta').value; 
+        const metaId = document.getElementById('inputMetaId').value;
+
+        if (nome && !isNaN(valor) && valor >=0 ) { // Adicionada verificação para valor >= 0
+          try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+              console.error('Token não encontrado. Faça login novamente.');
+              window.location.href = 'login.html'; // Ajuste
+              return;
+            }
+
+            let response;
+            const goalData = { name: nome, amount: valor, tag: tag || nome, type: tipo };
+
+            if (metaId) {
+              response = await fetch(`http://localhost:8000/finance/goals/${metaId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(goalData),
+              });
+            } else {
+              response = await fetch('http://localhost:8000/finance/goals/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(goalData),
+              });
+            }
+
+            if (!response.ok) throw new Error(`Erro na resposta do servidor ao salvar meta: ${response.status}`);
+            const updatedGoal = await response.json();
+
+            if (metaId) {
+              const index = goals.findIndex(g => g.id === parseInt(metaId));
+              if (index !== -1) goals[index] = updatedGoal;
+            } else {
+              goals.push(updatedGoal);
+            }
+
+            preencherMetas();
+            // Limpar campos do modal
+            document.getElementById('inputNomeMeta').value = '';
+            document.getElementById('inputValorMeta').value = '';
+            document.getElementById('inputTagMeta').value = '';
+            document.getElementById('inputMetaId').value = '';
+            document.getElementById('inputTipoMeta').value = 'despesa'; // Resetar tipo
+            document.getElementById('modalMetaTitle').textContent = 'Adicionar Meta';
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalMeta'));
+            if (modal) modal.hide();
+
+          } catch (error) {
+            console.error('Erro ao salvar meta:', error);
+            alert(`Erro ao salvar meta: ${error.message}`);
+          }
+        } else {
+            alert('Por favor, preencha o nome da meta e um valor alvo válido (maior ou igual a zero).');
+        }
+      });
+
+      async function deletarMeta(id) {
+        if (!confirm('Tem certeza que deseja deletar esta meta?')) return; // Adiciona confirmação
+
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            console.error('Token não encontrado. Faça login novamente.');
+            window.location.href = 'login.html'; // Ajuste
+            return;
+          }
+
+          const response = await fetch(`http://localhost:8000/finance/goals/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          });
+          if (!response.ok) throw new Error(`Erro na resposta do servidor ao deletar meta: ${response.status}`);
+          goals = goals.filter(g => g.id !== id);
+          preencherMetas();
+        } catch (error) {
+          console.error('Erro ao deletar meta:', error);
+          alert(`Erro ao deletar meta: ${error.message}`);
+        }
+      }
+      // Função para carregar a navbar (exemplo, ajuste conforme sua necessidade)
+      // function loadNavbar() {
+      //   const navbarPlaceholder = document.getElementById('navbar-placeholder');
+      //   if (navbarPlaceholder) {
+      //     fetch('navbar.html') // Caminho para seu arquivo navbar.html
+      //       .then(response => {
+      //         if (!response.ok) {
+      //           throw new Error('Navbar não encontrada');
+      //         }
+      //         return response.text();
+      //       })
+      //       .then(data => {
+      //         navbarPlaceholder.innerHTML = data;
+      //         // Chame aqui qualquer função JS que sua navbar precise para funcionar
+      //         // Ex: if (typeof activateNavbarLinks === 'function') activateNavbarLinks();
+      //       })
+      //       .catch(error => {
+      //         console.error('Erro ao carregar a navbar:', error);
+      //         navbarPlaceholder.innerHTML = '<p class="text-white">Erro ao carregar menu.</p>';
+      //       });
+      //   }
+      // }
+      // document.addEventListener('DOMContentLoaded', loadNavbar); // Carrega a navbar quando o DOM estiver pronto
+    </script>
+  </body>
+</html>
